@@ -76,30 +76,14 @@ namespace Assets.ItemCombo.Editor
         }
         #endregion
 
-        #region UniqueSelectResolver
+
+        #region CountResolver
 
         [Test]
-        public void UniqueSelectResolver()
-        {
-            // A,B,C のうちどれか2個を含む
-            var u = new UniqueSelectResolver(2, new[] { "A", "B", "C" }.Select(x => new SingleResolver(x)).ToArray());
-
-            Assert.True(u.Resolve("A", "B"));
-            Assert.True(u.Resolve("A", "C"));
-            Assert.True(u.Resolve("B", "C"));
-
-            Assert.False(u.Resolve("A"));
-            Assert.False(u.Resolve("A", "A")); //同じはだめ
-        }
-        #endregion
-
-        #region DuplicateResolver
-
-        [Test]
-        public void DuplicateResolver()
+        public void CountResolver()
         {
             // A を 2個以上
-            var u = new DuplicateResolver(2, new SingleResolver("A"));
+            var u = new CountResolver(2, new SingleResolver("A"));
 
             Assert.False(u.Resolve("A"));
             Assert.False(u.Resolve("A", "B"));
@@ -160,28 +144,6 @@ namespace Assets.ItemCombo.Editor
                 Assert.False(r3.Resolve(new[] { "B" }));
                 Assert.False(r3.Resolve(new string[0]));
             }
-
-            // A+B+C->2 AND !D
-            {
-                var r =
-                    new AndResolver(
-                        new UniqueSelectResolver(2, new[] { "A", "B", "C" }.Select(x => new SingleResolver(x)).ToArray()),
-                        new NotResolver(D)
-                    );
-
-                Assert.True(r.Resolve("A", "B"));
-                Assert.True(r.Resolve("A", "C"));
-                Assert.True(r.Resolve("B", "C"));
-                Assert.True(r.Resolve("A", "B", "C"));
-
-                Assert.False(r.Resolve());
-                Assert.False(r.Resolve("A", "B", "D"));
-                Assert.False(r.Resolve("A", "C", "D"));
-                Assert.False(r.Resolve("B", "C", "D"));
-                Assert.False(r.Resolve("A", "B", "C", "D"));
-
-            }
-
         }
 
         #endregion

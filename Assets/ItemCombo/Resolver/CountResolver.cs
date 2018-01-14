@@ -3,20 +3,20 @@
 namespace Assets.ItemCombo.Resolver
 {
     /// <summary>
-    /// 特定文字列のうち、指定文字列をN個以上含んでいるか
+    /// 前段の情報をN回満たすか
     /// </summary>
-    public class DuplicateResolver : IResolver
+    public class CountResolver : IResolver
     {
-        private SingleResolver _value;
+        private IResolver _value;
         private int _count;
 
-        public DuplicateResolver(int count, SingleResolver value)
+        public CountResolver(int count, IResolver value)
         {
             _count = count;
             _value = value;
         }
 
-        public DuplicateResolver Register(SingleResolver value)
+        public CountResolver Register(IResolver value)
         {
             _value = value;
             return this;

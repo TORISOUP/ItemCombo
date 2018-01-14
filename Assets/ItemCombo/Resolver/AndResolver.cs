@@ -21,5 +21,10 @@ namespace Assets.ItemCombo.Resolver
         {
             return A.Resolve(origin) && B.Resolve(origin);
         }
+
+        public override string ToString()
+        {
+            return string.Format("({0}*{1})", A.ToString(), B.ToString());
+        }
     }
 }

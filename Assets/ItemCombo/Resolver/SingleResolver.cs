@@ -20,5 +20,10 @@ namespace Assets.ItemCombo.Resolver
         {
             return origin.Contains(_value);
         }
+
+        public override string ToString()
+        {
+            return _value;
+        }
     }
 }

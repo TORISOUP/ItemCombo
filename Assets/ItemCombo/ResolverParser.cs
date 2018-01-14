@@ -8,7 +8,7 @@ namespace Assets.ItemCombo
 {
     public static class ResolverParser
     {
-        public static IResolver Parse(string original)
+        public static IResolver FromRPN(string original)
         {
             var stack = new Stack<IResolver>();
             var originalArray = original.Split(' ');
@@ -44,15 +44,9 @@ namespace Assets.ItemCombo
                             stack.Push(new NotResolver(p1));
                         }
                         break;
-                    case '+': // Unique
-                        var num1 = int.Parse(word.Substring(1));
-                        var a3 = stack.ToArray();
-                        stack.Clear();
-                        stack.Push(new UniqueSelectResolver(num1, a3.Cast<SingleResolver>().ToArray()));
-                        break;
-                    case '~': //Duplicate
+                    case '+': //Duplicate
                         var num2 = int.Parse(word.Substring(1));
-                        stack.Push(new DuplicateResolver(num2, stack.Pop() as SingleResolver));
+                        stack.Push(new CountResolver(num2, stack.Pop()));
                         break;
 
                     default:
@@ -69,6 +63,194 @@ namespace Assets.ItemCombo
             }
 
             return stack.Pop();
+        }
+
+
+
+        public static IResolver From(string[] originals, int start, int end)
+        {
+//            var s = "";
+//            for (int i = start; i < end; i++)
+//            {
+//                s += (originals[i] + " ");
+//            }
+//            UnityEngine.Debug.Log(s);
+
+
+            List<IResolvable> _resolvables = new List<IResolvable>();
+
+            for (int i = start; i < end; i++)
+            {
+                var current = originals[i];
+                switch (current[0])
+                {
+                    case '+': //OR
+                        _resolvables.Add(new OrResolvable());
+                        break;
+                    case '*': //AND
+                        _resolvables.Add(new AndResolvable());
+                        break;
+                    case '(': //カッコ開き
+
+                        int first = i;
+                        int last = i;
+
+                        int count = 0;
+                        //かっこの終わりを探す
+                        for (int j = first; j < end; j++)
+                        {
+                            var c = originals[j][0];
+                            if (c == '(')
+                            {
+                                count++;
+                                continue;
+                            }
+                            if (c == ')')
+                            {
+                                count--;
+                                if (count == 0)
+                                {
+                                    last = j;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (last > first)
+                        {
+                            _resolvables.Add(new FromStringResolvable(originals, first + 1, last));
+                            i = last;
+                        }
+
+                        continue;
+                    default:
+                        _resolvables.Add(new FixedResolvable(new SingleResolver(current)));
+                        continue;
+                }
+            }
+//
+//            foreach (var resolvable in _resolvables)
+//            {
+//                UnityEngine.Debug.Log(resolvable);
+//            }
+
+            int n = 0;
+            while (_resolvables.Count > 1)
+            {
+                n++;
+                if (n > 100) { throw new Exception("Failed resolve"); }
+
+                for (var i = 0; i < _resolvables.Count; i++)
+                {
+                    var current = _resolvables[i];
+
+                    if (current is FixedResolvable)
+                    {
+                        continue;
+                    }
+
+                    if (current is OrResolvable)
+                    {
+                        var o = (OrResolvable)current;
+                        o.Register(_resolvables[i - 1], _resolvables[i + 1]);
+                        _resolvables.RemoveRange(i - 1, 3);
+                        _resolvables.Insert(i - 1, new FixedResolvable(o.Create()));
+                        i--;
+                        continue;
+                    }
+                    if (current is AndResolvable)
+                    {
+                        var o = (AndResolvable)current;
+                        o.Register(_resolvables[i - 1], _resolvables[i + 1]);
+                        _resolvables.RemoveRange(i - 1, 3);
+                        _resolvables.Insert(i - 1, new FixedResolvable(o.Create()));
+                        i--;
+                        continue;
+                    }
+
+                    if (current is FromStringResolvable)
+                    {
+                        _resolvables.RemoveAt(i);
+                        _resolvables.Insert(i, new FixedResolvable(current.Create()));
+                    }
+                }
+            }
+
+            return _resolvables[0].Create();
+        }
+
+        public interface IResolvable
+        {
+            IResolver Create();
+        }
+
+        public struct FixedResolvable : IResolvable
+        {
+            private readonly IResolver _resolver;
+
+            public FixedResolvable(IResolver resolver)
+            {
+                _resolver = resolver;
+            }
+
+            public IResolver Create()
+            {
+                return _resolver;
+            }
+        }
+
+        public struct OrResolvable : IResolvable
+        {
+            private IResolvable _a;
+            private IResolvable _b;
+
+            public void Register(IResolvable a, IResolvable b)
+            {
+                _a = a;
+                _b = b;
+            }
+
+            public IResolver Create()
+            {
+                return new OrResolver(_a.Create(), _b.Create());
+            }
+        }
+
+        public struct AndResolvable : IResolvable
+        {
+            private IResolvable _a;
+            private IResolvable _b;
+
+            public void Register(IResolvable a, IResolvable b)
+            {
+                _a = a;
+                _b = b;
+            }
+
+            public IResolver Create()
+            {
+                return new AndResolver(_a.Create(), _b.Create());
+            }
+        }
+
+        public struct FromStringResolvable : IResolvable
+        {
+            private readonly string[] _array;
+            private int _start;
+            private int _end;
+
+            public FromStringResolvable(string[] array, int start, int end)
+            {
+                _array = array;
+                _start = start;
+                _end = end;
+            }
+
+            public IResolver Create()
+            {
+                return ResolverParser.From(_array, _start, _end);
+            }
+
         }
     }
 }

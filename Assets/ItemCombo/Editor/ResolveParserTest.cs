@@ -8,62 +8,49 @@ namespace Assets.ItemCombo.Editor
     public class ResolverParserTest
     {
 
-
         [Test]
-        public void パースできる1()
+        public void 数式で表現できる()
         {
-            var resolver = ResolverParser.Parse("ebi ika tako +2");
-            var expected = new UniqueSelectResolver(2, "ebi", "ika", "tako");
-            PatternTest(resolver, expected, "ebi", "ika", "tako", "unko");
-        }
+            var str = "A + B * C";
 
-        [Test]
-        public void パースできる2()
-        {
-            var resolver = ResolverParser.Parse("ebi ika tako +2 geta &");
-
-            var expected = new AndResolver(
-                new SingleResolver("geta"),
-                new UniqueSelectResolver(2, "ebi", "ika", "tako"));
-
-            PatternTest(resolver, expected, "ebi", "ika", "tako", "unko", "geta");
-        }
-
-        [Test]
-        public void パースできる3()
-        {
-            var resolver = ResolverParser.Parse("ebi ika tako +2 geta & doku ! &");
-
-            var expected = new AndResolver(
-                new AndResolver(
-                    new SingleResolver("geta"),
-                    new UniqueSelectResolver(2, "ebi", "ika", "tako")
-                ),
-                new NotResolver(new SingleResolver("doku")));
-
-            PatternTest(resolver, expected, "ebi", "ika", "tako", "unko", "geta", "doku");
-        }
-
-        [Test]
-        public void 逆ポーランド記法からResolverを生成できる()
-        {
-            // ebi ika tako からどれか2個以上を含む　かつ getaを含む かつ dokuは含まない かつ nikuかsakeのどちらかを含む
-            var resolver = ResolverParser.Parse("ebi ika tako +2 geta & doku ! & niku sake | &");
+            var array = str.Split(' ');
+            var actual = ResolverParser.From(array, 0, array.Length);
 
             var expected =
                 new AndResolver(
-                    new OrResolver(new SingleResolver("sake"), new SingleResolver("niku")),
-                    new AndResolver(
-                        new AndResolver(
-                            new SingleResolver("geta"),
-                            new UniqueSelectResolver(2, "ebi", "ika", "tako")
-                        ),
-                        new NotResolver(new SingleResolver("doku"))
-                    )
-                );
+                    new OrResolver(
+                        new SingleResolver("A"),
+                        new SingleResolver("B")
+                    ),
+                    new SingleResolver("C"));
 
-            //全組み合わせテスト
-            PatternTest(resolver, expected, "ebi", "ika", "tako", "unko", "geta", "doku", "niku", "sake");
+            UnityEngine.Debug.Log(actual.ToString());
+            UnityEngine.Debug.Log(expected.ToString());
+
+            PatternTest(actual, expected, "A", "B", "C", "D");
+        }
+
+        [Test]
+        public void かっこを含んだ数式で表現できる()
+        {
+            var str = "A + ( B * C ) + D";
+
+            var array = str.Split(' ');
+            var actual = ResolverParser.From(array, 0, array.Length);
+
+            var expected =
+                new OrResolver(
+                    new OrResolver(
+                        new SingleResolver("A"),
+                        new AndResolver(new SingleResolver("B"), new SingleResolver("C"))),
+                    new SingleResolver("D"));
+
+
+            UnityEngine.Debug.Log("input   : " + str);
+            UnityEngine.Debug.Log("expected: " + expected.ToString());
+            UnityEngine.Debug.Log("result  : " + actual.ToString());
+
+            PatternTest(actual, expected, "A", "B", "C", "D");
         }
 
         private void PatternTest(IResolver actual, IResolver expected, params string[] values)
