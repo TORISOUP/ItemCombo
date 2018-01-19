@@ -13,16 +13,10 @@ namespace Assets.ItemCombo.Editor
         {
             var str = "A + B * C";
 
-            var array = str.Split(' ');
-            var actual = ResolverParser.From(array, 0, array.Length);
+            var actual = new Parser(str).Expr();
 
             var expected =
-                new AndResolver(
-                    new OrResolver(
-                        new SingleResolver("A"),
-                        new SingleResolver("B")
-                    ),
-                    new SingleResolver("C"));
+                new OrResolver(new SingleResolver("A"), new AndResolver(new SingleResolver("B"), new SingleResolver("C")));
 
             UnityEngine.Debug.Log(actual.ToString());
             UnityEngine.Debug.Log(expected.ToString());
@@ -34,10 +28,7 @@ namespace Assets.ItemCombo.Editor
         public void かっこを含んだ数式で表現できる()
         {
             var str = "A + ( B * C ) + D";
-
-            var array = str.Split(' ');
-            var actual = ResolverParser.From(array, 0, array.Length);
-
+            var actual = new Parser(str).Expr();
             var expected =
                 new OrResolver(
                     new OrResolver(
@@ -51,6 +42,23 @@ namespace Assets.ItemCombo.Editor
             UnityEngine.Debug.Log("result  : " + actual.ToString());
 
             PatternTest(actual, expected, "A", "B", "C", "D");
+        }
+
+        [Test]
+        public void 計算できる()
+        {
+            var str = "A * B * ( C + D ) ^ 3";
+            var actual = new Parser(str).Expr();
+
+            Assert.True(actual.Resolve("A", "B", "C", "C", "C"));
+            Assert.True(actual.Resolve("A", "B", "C", "D", "C"));
+            Assert.True(actual.Resolve("A", "B", "C", "D", "D"));
+            Assert.True(actual.Resolve("A", "B", "D", "D", "D"));
+
+            Assert.False(actual.Resolve("A", "B", "C", "C"));
+            Assert.False(actual.Resolve("A", "B", "D", "C"));
+            Assert.False(actual.Resolve("A", "B", "C", "C", "A"));
+            Assert.False(actual.Resolve("A", "D", "D", "D"));
         }
 
         private void PatternTest(IResolver actual, IResolver expected, params string[] values)

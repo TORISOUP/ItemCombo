@@ -27,5 +27,10 @@ namespace Assets.ItemCombo.Resolver
         {
             return origin.Count(x => _value.Resolve(x)) >= _count;
         }
+
+        public override string ToString()
+        {
+            return string.Format("({0}^{1})", _value, _count);
+        }
     }
 }
